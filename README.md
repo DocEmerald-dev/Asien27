@@ -1,6 +1,6 @@
 # Asien-Reiseplaner
 
-Gemeinsame Reiseplanung für eure Asienreise: Jede Person meldet sich mit eigenem Konto an, bewertet Ziele und trägt ein, wann sie Zeit hat. Die Seite berechnet daraus automatisch, wer wann zusammen wohin fährt.
+Gemeinsame Reiseplanung für eure Asienreise: Jede Person meldet sich mit eigenem Konto an, bewertet Ziele und trägt ein, wann sie Zeit hat. Die Seite berechnet daraus automatisch, wer wann zusammen wohin fährt, und zeigt jedem seine Ziele auf einer Karte. Zu jedem Ziel gibt es ein Infofenster mit Bildern, Kurzinfos und Top 5. Reisezeitraum, Tempo, Fixstopps und die Zielliste verwaltet ein Admin.
 
 Die Seite selbst liegt kostenlos auf **GitHub Pages**. Login und Datenbank laufen über **Firebase** (kostenloser Google-Dienst, für eine Freundesgruppe reicht der Gratis-Tarif „Spark“ dauerhaft). Einmalige Einrichtung: etwa 15 Minuten.
 
@@ -27,7 +27,8 @@ Die Seite selbst liegt kostenlos auf **GitHub Pages**. Login und Datenbank laufe
 
 1. Links: **Build → Firestore Database** → „Datenbank erstellen“.
 2. Standort z. B. `europe-west3 (Frankfurt)` wählen, dann **Produktionsmodus** → „Erstellen“.
-3. Reiter **Regeln** öffnen, den gesamten Inhalt löschen, den Inhalt von `firestore.rules` einfügen → „Veröffentlichen“.
+3. Reiter **Regeln** öffnen, den gesamten Inhalt löschen, den Inhalt von `firestore.rules` einfügen.
+4. Ganz oben in den Regeln bei `admins()` die E-Mail-Adresse deines Admin-Kontos eintragen (siehe Schritt 8) → „Veröffentlichen“.
 
 **Empfehlung:** Ohne Freigabeliste kann jeder, der den Link kennt, sich registrieren und mitplanen. Wenn nur ihr planen sollt, folge den Hinweisen oben in `firestore.rules` (Variante B), trage eure E-Mail-Adressen ein und veröffentliche die Regeln erneut.
 
@@ -54,10 +55,34 @@ In Firebase: **Authentication → Einstellungen → Autorisierte Domains → „
 
 Schick den Link herum. Jede Person klickt auf „Registrieren“ (Name, E-Mail, Passwort) und hat danach ihr eigenes Dashboard. In der Gruppe taucht sie auf, sobald sie ein Ziel bewertet oder ihre Verfügbarkeit einträgt.
 
+## Schritt 8: Admin einrichten
+
+Nur Admins sehen den Bereich **„Admin“** und dürfen Reisezeitraum, Gruppengröße, Tempo, Fixstopps und die Zielliste ändern. Alle anderen sehen diese Einstellungen nur.
+
+1. **Admin-Konto anlegen:** Auf der Website mit „Registrieren“ ein Konto erstellen. Für einen getrennten Admin-Zugang nimmst du dafür eine eigene E-Mail-Adresse (z. B. eine Zweitadresse). Du kannst aber auch dein normales Konto zum Admin machen.
+2. **Konto zuerst anlegen, dann eintragen:** Registriere das Admin-Konto, bevor du seine Adresse in die Regeln schreibst. Dann kann niemand anderes dieselbe Adresse belegen.
+3. **In Firebase eintragen:** Firestore Database → Reiter **Regeln** → bei `admins()` die Adresse kleingeschrieben eintragen, z. B. `return ['admin.asien27@web.de'];` (mehrere Admins mit Komma trennen) → „Veröffentlichen“.
+4. Die Website neu laden und mit dem Admin-Konto anmelden. Oben erscheint „Admin“ und der neue Reiter **Admin**.
+
+Die Admin-Adresse trägst du nur in der Firebase-Konsole ein. Die Datei `firestore.rules` auf GitHub kann den Platzhalter behalten, so bleibt die Adresse privat.
+
+**Was der Admin kann:**
+- Reise-Eckdaten: Start, Ende, Gruppengröße, Mindestgröße pro Stopp, Reisetempo.
+- Fixstopps anlegen, ändern und löschen.
+- Ziele hinzufügen, bearbeiten und entfernen. Mit „Koordinaten & Infos suchen“ füllt die Seite Koordinaten und Wikipedia-Artikel automatisch aus. Mit „Standardliste wiederherstellen“ kommen die 37 Ausgangsziele zurück.
+
+## Infofenster und Karte
+
+- **Bilder und Text** im Infofenster lädt die Seite live aus der deutschen Wikipedia, mit Quellenangabe.
+- **Top 5:** Eine feste Auswahl beliebter Sehenswürdigkeiten, die der Admin pro Ziel ändern kann. Die aktuelle Tripadvisor-Rangliste kann die Seite nicht direkt anzeigen (Tripadvisor bietet dafür keine freie Schnittstelle), deshalb gibt es den Knopf „Top-Liste auf Tripadvisor öffnen“.
+- **Karte:** Kartendaten von OpenStreetMap über CARTO, Darstellung mit Leaflet.
+
 ## Häufige Probleme
 
 - **„Firebase ist noch nicht eingerichtet“:** `config.js` ist noch nicht ausgefüllt oder wurde nicht mit hochgeladen.
-- **„Keine Berechtigung“:** Die Regeln aus Schritt 3 fehlen, oder die E-Mail steht bei Variante B nicht in der Liste.
+- **„Keine Berechtigung“ oder „Zielliste konnte nicht geladen werden“:** Die aktuellen Regeln aus `firestore.rules` sind noch nicht in Firebase veröffentlicht (Schritt 3), oder die E-Mail steht bei Variante B nicht in der Liste.
+- **Der Reiter „Admin“ fehlt:** Die Adresse in `admins()` stimmt nicht genau mit dem angemeldeten Konto überein (Tippfehler, Großbuchstaben), oder die Regeln wurden nach dem Ändern nicht veröffentlicht. Danach die Seite neu laden.
+- **Keine Karte oder keine Bilder:** Karte und Bilder kommen aus dem Internet (unpkg.com, CARTO, Wikipedia). Ein Werbeblocker oder Schulnetz kann das blockieren.
 - **„E-Mail-Anmeldung ist nicht aktiviert“:** Schritt 2 nachholen.
 - **Leere Seite beim Doppelklick auf `index.html`:** Browser blockieren das lokal. Entweder über GitHub Pages öffnen oder im Ordner `python3 -m http.server` starten und `http://localhost:8000` aufrufen.
 - **Änderungen sind nicht sichtbar:** GitHub Pages braucht nach dem Hochladen 1–2 Minuten; danach die Seite neu laden.
