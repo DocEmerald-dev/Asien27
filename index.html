@@ -388,8 +388,8 @@ function placeMap(P){
   if(!MAP){
     mapEl=document.createElement('div');mapEl.className='map';slot.appendChild(mapEl);
     MAP=L.map(mapEl,{worldCopyJump:true});
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,
-      attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende &copy; <a href="https://carto.com/attributions">CARTO</a>'}).addTo(MAP);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,
+      attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'}).addTo(MAP);
     mLayer=L.layerGroup().addTo(MAP);
     MAP.setView([18,105],3);
   }else if(mapEl.parentNode!==slot)slot.appendChild(mapEl);
