@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Asien-Reiseplaner</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%8C%8F%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--fg:#1d2a2a;--mut:#667;--line:#e2ddd2;--acc:#0f766e;--accfg:#fff;--soft:#e3f3f0;--warn:#b45309;--warnbg:#fef3c7;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121a1a;--card:#1b2626;--fg:#e8efee;--mut:#9fb0ae;--line:#2c3b3a;--acc:#2dd4bf;--accfg:#06201d;--soft:#18312f;--warn:#fbbf24;--warnbg:#3a2e0e;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121a1a;--card:#1b2626;--fg:#e8efee;--mut:#9fb0ae;--line:#2c3b3a;--acc:#2dd4bf;--accfg:#06201d;--soft:#18312f;--warn:#fbbf24;--warnbg:#3a2e0e;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+h1{font-size:1.4rem;margin:0}h2{font-size:1.1rem;margin:20px 0 8px}
+nav{display:flex;gap:6px;margin:14px 0;flex-wrap:wrap}
+button,select,input{font:inherit;color:var(--fg)}
+nav button{padding:8px 14px;border:1px solid var(--line);background:var(--card);border-radius:999px;cursor:pointer}
+nav button.on{background:var(--acc);color:var(--accfg);border-color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0}
+.mut{color:var(--mut);font-size:.9rem}
+.warn{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:8px 12px;margin:8px 0;font-size:.92rem}
+.row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin:6px 0}
+label{display:flex;flex-direction:column;font-size:.85rem;color:var(--mut);gap:2px}
+input,select{padding:7px 9px;border:1px solid var(--line);background:var(--bg);border-radius:8px;max-width:100%}
+input[type=number]{width:90px}
+.dest{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)}
+.dest:first-of-type{border-top:0}
+.rate{display:flex;gap:4px}
+.rate button{padding:5px 10px;border:1px solid var(--line);background:var(--bg);border-radius:8px;cursor:pointer;font-size:.85rem}
+.rate button.on{color:#fff;border-color:transparent;font-weight:600}
+.rate button.on.l0{background:#dc2626}.rate button.on.l1{background:#b45309}.rate button.on.l2{background:#15803d}.rate button.on.l3{background:#2563eb}
+.pill{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:6px 14px;border-radius:999px;font-size:.9rem;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:20;background:var(--card);color:var(--mut);border:1px solid var(--line)}
+.pill:empty{display:none}.pill.ok{background:#15803d;color:#fff;border-color:#15803d}.pill.err{background:#b91c1c;color:#fff;border-color:#b91c1c}
+.stop{display:grid;grid-template-columns:110px 1fr;gap:12px}
+.dt{font-weight:600;font-size:.92rem}.dt small{display:block;color:var(--mut);font-weight:400}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.chip{background:var(--soft);border-radius:999px;padding:2px 10px;font-size:.85rem}
+.chip.me{background:var(--acc);color:var(--accfg)}
+.badge{background:var(--warnbg);color:var(--warn);border-radius:6px;padding:1px 7px;font-size:.78rem}
+.go{padding:8px 14px;border:1px solid var(--acc);background:var(--soft);border-radius:8px;cursor:pointer}
+.login label{margin:8px 0}.login input{width:100%}
+.x{padding:7px 11px;border:1px solid var(--line);background:var(--bg);border-radius:8px;cursor:pointer}
+@media(max-width:520px){.stop{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><h1>🌏 Asien-Reiseplaner</h1><span class="mut" id="who"></span></header>
+<nav id="nav"></nav>
+<div id="err"></div>
+<main id="app"></main>
+<div id="save" class="pill" role="status" aria-live="polite"></div>
+<p class="mut">Der Plan ist eine Heuristik: Ziele mit der höchsten Gruppenbewertung werden zuerst eingeplant und geografisch sinnvoll einsortiert, bis der Zeitraum voll ist.</p>
+</div>
+<script type="module">
+import {firebaseConfig} from './config.js';
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import {getFirestore,doc,collection,onSnapshot,setDoc} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+const R=[['bkk','Thailand','Bangkok',13.75,100.5,3],['cnx','Thailand','Chiang Mai',18.79,98.98,3],['kbi','Thailand','Krabi & Inseln',8.09,98.91,4],['usm','Thailand','Koh Samui',9.51,100.01,4],
+['han','Vietnam','Hanoi',21.03,105.85,3],['nbh','Vietnam','Ninh Binh',20.25,105.97,2],['hoi','Vietnam','Hoi An & Da Nang',15.88,108.33,3],['sgn','Vietnam','Ho-Chi-Minh-Stadt',10.78,106.7,3],
+['rep','Kambodscha','Siem Reap (Angkor)',13.36,103.86,3],['pnh','Kambodscha','Phnom Penh',11.56,104.92,2],['lpq','Laos','Luang Prabang',19.89,102.13,3],
+['dps','Indonesien','Bali',-8.41,115.19,6],['jog','Indonesien','Yogyakarta',-7.8,110.36,3],['lbj','Indonesien','Komodo & Flores',-8.49,119.88,3],
+['kul','Malaysia','Kuala Lumpur',3.14,101.69,3],['pen','Malaysia','Penang',5.41,100.33,3],['sin','Singapur','Singapur',1.35,103.82,3],
+['pls','Philippinen','Palawan (El Nido)',11.18,119.39,5],['ceb','Philippinen','Cebu & Bohol',10.32,123.9,4],['mnl','Philippinen','Manila',14.6,120.98,2],
+['tyo','Japan','Tokio',35.68,139.69,5],['kyo','Japan','Kyoto & Osaka',35.01,135.77,4],['spk','Japan','Sapporo (Hokkaido)',43.06,141.35,4],
+['sel','Südkorea','Seoul',37.57,126.98,4],['pus','Südkorea','Busan',35.18,129.07,2],
+['pek','China','Peking',39.9,116.4,4],['sha','China','Shanghai',31.23,121.47,3],['ctu','China','Chengdu',30.57,104.07,3],['hkg','China','Hongkong',22.32,114.17,3],['tpe','Taiwan','Taipeh',25.03,121.56,4],
+['del','Indien','Delhi & Agra',28.61,77.21,4],['jai','Indien','Jaipur',26.91,75.79,3],['goi','Indien','Goa',15.5,73.83,4],['cok','Indien','Kerala',9.93,76.27,5],
+['ktm','Nepal','Kathmandu',27.72,85.32,4],['cmb','Sri Lanka','Sri-Lanka-Rundreise',7.29,80.63,5],['mle','Malediven','Malediven',3.2,73.22,4]];
+const D=R.map(r=>({id:r[0],c:r[1],n:r[2],la:r[3],lo:r[4],nt:r[5]}));
+const byId=Object.fromEntries(D.map(d=>[d.id,d]));
+const LV=['Nein','Okay','Gern','Muss!'];
+const DEF={start:'2027-02-01',end:'2027-02-28',group:4,min:2,pace:1,fixed:[]};
+const S={db:null,user:null,uid:null,trip:{...DEF,fixed:[]},wishes:{},names:{},tab:'dash',err:'',stale:false,ready:false};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone=o=>JSON.parse(JSON.stringify(o));
+const rad=x=>x*Math.PI/180;
+const dist=(a,b)=>{const h=Math.sin(rad(b.la-a.la)/2)**2+Math.cos(rad(a.la))*Math.cos(rad(b.la))*Math.sin(rad(b.lo-a.lo)/2)**2;return 12742*Math.asin(Math.sqrt(h))};
+const U=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');return m?Date.UTC(+m[1],m[2]-1,+m[3])/864e5:NaN};
+const fmt=n=>new Date(n*864e5).toLocaleDateString('de-DE',{timeZone:'UTC',day:'2-digit',month:'2-digit',year:'2-digit'});
+const nm=id=>S.names[id]||(id===S.uid?'Ich':'Mitreisende(r)');
+const my=()=>S.wishes[S.uid]||{ratings:{},from:'',to:''};
+const mine=()=>{const w=S.wishes[S.uid]||(S.wishes[S.uid]={});w.ratings=w.ratings||{};w.from=w.from||'';w.to=w.to||'';w.name=S.myName||w.name||'';return w};
+const rt=(m,id)=>+((S.wishes[m].ratings||{})[id])||0;
+
+function sim(order,E){
+  let day=0,prev=null,bad=0;const out=[];
+  order.forEach(s=>{
+    let tr=0,km=0,wait=0,late=false;
+    if(prev){km=Math.round(dist(byId[prev.id],byId[s.id]));tr=km<500?0:1;day+=tr}
+    if(!isNaN(s.di)){if(day<=s.di){wait=s.di-day;day=s.di}else{bad+=1000;late=true}}
+    out.push({...s,a:day,e:day+s.n,tr,km,wait,late});
+    day+=s.n;prev=s;
+  });
+  bad+=Math.max(0,day-E);
+  return{out,bad};
+}
+
+function compute(){
+  const T=S.trip,s0=U(T.start),e0=U(T.end);
+  if(isNaN(s0)||isNaN(e0)||e0<s0)return{err:'Bitte unter „Gruppe & Einstellungen“ ein gültiges Start- und Enddatum setzen (Ende nicht vor Start).'};
+  const E=e0-s0,M=Object.keys(S.wishes),warns=[],skipped=[];
+  const eff=Math.max(1,Math.min(Number(T.min)||1,M.length||1));
+  const pace=Number(T.pace)||1,nts=d=>Math.max(1,Math.round(d.nt*pace));
+  const fixedRows=(T.fixed||[]).filter(f=>byId[f.d]);
+  const fixedIds=new Set(fixedRows.map(f=>f.d));
+  const anch=[],loose=[];
+  fixedRows.forEach(f=>{
+    let di=f.date?U(f.date)-s0:NaN;
+    if(!isNaN(di)&&(di<0||di>E)){warns.push('Fixstopp '+byId[f.d].n+': Das Datum liegt außerhalb des Reisezeitraums und wird ignoriert.');di=NaN}
+    const o={id:f.d,fix:1,di,n:Number(f.n)>0?Math.round(Number(f.n)):nts(byId[f.d])};
+    (isNaN(di)?loose:anch).push(o);
+  });
+  anch.sort((a,b)=>a.di-b.di);
+  const cands=[];
+  D.forEach(d=>{
+    if(fixedIds.has(d.id))return;
+    const k=M.filter(m=>rt(m,d.id)>0).length,sc=M.reduce((t,m)=>t+rt(m,d.id),0);
+    if(k>=eff&&k>0)cands.push({id:d.id,fix:0,di:NaN,n:nts(d),sc,k});
+  });
+  cands.sort((a,b)=>b.sc-a.sc||a.n-b.n);
+  let order=anch;
+  loose.concat(cands).forEach(c=>{
+    const base=sim(order,E).bad;let best=null;
+    for(let p=0;p<=order.length;p++){
+      const o=order.slice(0,p).concat([c],order.slice(p));
+      const bad=sim(o,E).bad,pr=order[p-1],nx=order[p];
+      const cost=(pr?dist(byId[pr.id],byId[c.id]):0)+(nx?dist(byId[c.id],byId[nx.id]):0)-(pr&&nx?dist(byId[pr.id],byId[nx.id]):0);
+      const ok=bad<=base,v=ok?cost:1e7+bad;
+      if(!best||v<best.v)best={v,o,ok};
+    }
+    if(best.ok||c.fix)order=best.o;else skipped.push(c);
+  });
+  const fin=sim(order,E);
+  const items=fin.out.map(it=>{
+    const A=s0+it.a,B=s0+it.e,who=[],miss=[];
+    M.forEach(m=>{
+      const w=S.wishes[m],r=rt(m,it.id);if(r<=0)return;
+      const f=isNaN(U(w.from))?s0:U(w.from),t=isNaN(U(w.to))?e0:U(w.to);
+      (f<=A&&t>=B?who:miss).push(m);
+    });
+    if(it.late)warns.push('Fixstopp '+byId[it.id].n+': Anreise erst nach dem festgelegten Datum – Reihenfolge, Dauer oder Termine der Fixstopps prüfen.');
+    else if(it.e>E)warns.push(byId[it.id].n+(it.fix?' (Fixstopp)':'')+' endet nach dem Reiseende.');
+    return{...it,A,B,who,miss,low:who.length<eff};
+  });
+  return{s0,e0,E,M,eff,items,skipped,warns};
+}
+
+function saver(path,get){
+  let busy=false,dirty=false;
+  const f=async()=>{dirty=true;showSave('saving');if(busy)return;busy=true;let failed=false;
+    while(dirty){dirty=false;try{await S.db.doc(path()).set(get());f.t=Date.now()}catch(e){failed=true;S.err='Speichern nicht möglich: '+((e&&e.message)||'keine Schreibrechte')+'. Bist du angemeldet und für diese Reise freigeschaltet?';render(1)}}
+    busy=false;showSave(failed?'err':'ok')};
+  f.t=0;f.p=()=>busy||dirty;return f;
+}
+let svTimer=null;
+function showSave(st){
+  const el=document.getElementById('save');if(!el)return;
+  clearTimeout(svTimer);
+  el.className='pill '+st;
+  el.textContent=st==='saving'?'Speichert …':st==='ok'?'✓ Gespeichert':'⚠ Nicht gespeichert';
+  if(st==='ok')svTimer=setTimeout(()=>{el.className='pill';el.textContent=''},3000);
+}
+const saveMe=saver(()=>'wishes/'+S.uid,()=>mine());
+const saveTrip=saver(()=>'trip/main',()=>S.trip);
+
+const nights=n=>n===1?'1 Nacht':n+' Nächte';
+const chips=(ids)=>ids.map(i=>'<span class="chip'+(i===S.uid?' me':'')+'">'+esc(nm(i))+'</span>').join('');
+
+function dashHTML(P){
+  const w=my(),M=Object.keys(S.wishes);let h='';
+  h+='<div class="card"><b>Meine Verfügbarkeit</b><div class="mut">Leer lassen = ganzer Reisezeitraum. Nur in deinem Zeitfenster wirst du bei Stopps als mitreisend eingeplant.</div><div class="row">'+
+    '<label>Frei ab<input type="date" data-t="me" data-k="from" min="'+esc(S.trip.start)+'" max="'+esc(S.trip.end)+'" value="'+esc(w.from||'')+'"></label>'+(w.from?'<button class="x" data-a="clr" data-k="from">Leeren</button>':'')+
+    '<label>Frei bis<input type="date" data-t="me" data-k="to" min="'+esc(S.trip.start)+'" max="'+esc(S.trip.end)+'" value="'+esc(w.to||'')+'"></label>'+(w.to?'<button class="x" data-a="clr" data-k="to">Leeren</button>':'')+'</div>'+
+    (w.from&&w.to&&w.to<w.from?'<div class="warn">„Frei bis“ liegt vor „Frei ab“ – bitte korrigieren.</div>':'')+((w.from&&w.from>S.trip.end)||(w.to&&w.to<S.trip.start)?'<div class="warn">Dein Zeitfenster liegt außerhalb des Reisezeitraums – du wirst bei keinem Stopp eingeplant. Mit „Leeren“ zurücksetzen.</div>':'')+'</div>';
+  h+='<h2>Mein Reiseplan</h2>';
+  if(P.err)h+='<div class="warn">'+esc(P.err)+'</div>';
+  else{
+    const mineI=P.items.filter(i=>i.who.includes(S.uid));
+    h+=mineI.length?'<div class="card">'+mineI.map(i=>'<div><b>'+fmt(i.A)+' – '+fmt(i.B)+'</b> · '+esc(byId[i.id].n)+' <span class="mut">('+esc(byId[i.id].c)+', '+nights(i.n)+', mit '+(i.who.length-1)+' weiteren)</span></div>').join('')+'</div>':
+      '<p class="mut">Noch keine Stopps für dich: Bewertet unten Ziele („Gern“ oder „Muss!“) und prüft deine Verfügbarkeit.</p>';
+  }
+  const rated=Object.values(w.ratings||{}).filter(v=>v>0).length;
+  h+='<h2>Meine Wunschziele <span class="mut">('+rated+' bewertet)</span></h2>';
+  let last='';
+  D.forEach(d=>{
+    if(d.c!==last){if(last)h+='</div>';h+='<div class="card"><b>'+esc(d.c)+'</b>';last=d.c}
+    const cur=(w.ratings||{})[d.id],k=M.filter(m=>rt(m,d.id)>0).length;
+    h+='<div class="dest"><div>'+esc(d.n)+' <span class="mut">· ~'+nights(d.nt)+' · 👥 '+k+'</span></div><div class="rate">'+
+      LV.map((l,v)=>'<button data-a="rate" data-d="'+d.id+'" data-v="'+v+'" class="'+(cur===v?'on l'+v:'')+'" aria-pressed="'+(cur===v)+'">'+l+'</button>').join('')+'</div></div>';
+  });
+  return h+'</div>';
+}
+
+function planHTML(P){
+  if(P.err)return '<div class="warn">'+esc(P.err)+'</div>';
+  let h='<div class="card"><b>'+fmt(P.s0)+' – '+fmt(P.e0)+'</b> · '+(P.E+1)+' Tage · '+P.M.length+' Reisende mit Angaben · Mindestgröße pro Stopp: '+P.eff+'</div>';
+  P.warns.forEach(w=>h+='<div class="warn">⚠ '+esc(w)+'</div>');
+  if(!P.items.length)h+='<p class="mut">Noch keine Stopps. Bewertet im Dashboard Ziele (mindestens '+P.eff+' Interessent(en) pro Ziel) oder legt Fixstopps an.</p>';
+  P.items.forEach((it,i)=>{
+    const d=byId[it.id],pv=i?byId[P.items[i-1].id]:null;
+    h+='<div class="card stop"><div class="dt">'+fmt(it.A)+' – '+fmt(it.B)+'<small>'+nights(it.n)+'</small></div><div><b>'+esc(d.n)+'</b> <span class="mut">'+esc(d.c)+'</span> '+(it.fix?'<span class="badge">Fixstopp</span>':'')+
+      (pv&&it.km?'<div class="mut">↳ '+it.km.toLocaleString('de-DE')+' km ab '+esc(pv.n)+(it.tr?' · '+it.tr+' Reisetag':' · gleicher Tag')+'</div>':'')+
+      (it.wait?'<div class="mut">Puffer davor: '+it.wait+(it.wait===1?' Tag':' Tage')+' (bis zum Fixtermin)</div>':'')+
+      '<div class="chips">'+(it.who.length?chips(it.who):'<span class="mut">Niemand verfügbar/interessiert</span>')+'</div>'+
+      (it.miss.length?'<div class="mut">Möchten mit, sind aber nicht im ganzen Zeitraum verfügbar: '+it.miss.map(m=>esc(nm(m))).join(', ')+'</div>':'')+
+      (it.low?'<div class="warn">Unter der Mindestgröße ('+it.who.length+' von '+P.eff+')</div>':'')+'</div></div>';
+  });
+  if(P.skipped.length)h+='<h2>Nicht eingeplant (kein Platz im Zeitraum)</h2><div class="card">'+P.skipped.map(c=>esc(byId[c.id].n)+' <span class="mut">(Wertung '+c.sc+', '+c.k+' Interessent(en))</span>').join('<br>')+'</div>';
+  return h;
+}
+
+function groupHTML(){
+  const T=S.trip,M=Object.keys(S.wishes);
+  let h='<div class="card"><b>Reise-Eckdaten</b><div class="row">'+
+    '<label>Start<input type="date" data-t="trip" data-k="start" value="'+esc(T.start)+'"></label>'+
+    '<label>Ende<input type="date" data-t="trip" data-k="end" value="'+esc(T.end)+'"></label>'+
+    '<label>Gruppengröße<input type="number" min="1" max="50" data-t="trip" data-k="group" value="'+esc(T.group)+'"></label>'+
+    '<label>Mindestgröße pro Stopp<input type="number" min="1" max="50" data-t="trip" data-k="min" value="'+esc(T.min)+'"></label>'+
+    '<label>Reisetempo<select data-t="trip" data-k="pace">'+[['0.7','Entspannt (kürzere Stopps)'],['1','Normal'],['1.4','Gemütlich (längere Stopps)']].map(o=>'<option value="'+o[0]+'"'+(Number(T.pace)===Number(o[0])?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label></div>'+
+    '<div class="mut">'+M.length+' von '+esc(T.group)+' Freunden haben Angaben gemacht.</div></div>';
+  h+='<div class="card"><b>Fixstopps</b><div class="mut">Diese Ziele werden immer eingeplant. Mit Datum = Anreisetag fest, ohne Datum = frei platzierbar. „Nächte“ leer = Standarddauer.</div>';
+  (T.fixed||[]).forEach((f,i)=>{
+    h+='<div class="row"><label>Ziel<select data-t="fix" data-i="'+i+'" data-k="d">'+D.map(d=>'<option value="'+d.id+'"'+(d.id===f.d?' selected':'')+'>'+esc(d.c)+' – '+esc(d.n)+'</option>').join('')+'</select></label>'+
+      '<label>Anreise am (optional)<input type="date" data-t="fix" data-i="'+i+'" data-k="date" value="'+esc(f.date||'')+'"></label>'+
+      '<label>Nächte<input type="number" min="1" max="60" data-t="fix" data-i="'+i+'" data-k="n" value="'+(f.n>0?esc(f.n):'')+'"></label>'+
+      '<button class="x" data-a="delfix" data-i="'+i+'" aria-label="Fixstopp entfernen">✕</button></div>';
+  });
+  h+='<div class="row"><button class="go" data-a="addfix">＋ Fixstopp hinzufügen</button></div></div>';
+  h+='<h2>Reisende</h2><div class="card">'+(M.length?M.map(m=>{
+    const w=S.wishes[m],n=Object.values(w.ratings||{}).filter(v=>v>0).length;
+    return '<div class="dest"><span>'+esc(nm(m))+(m===S.uid?' (du)':'')+'</span><span class="mut">'+n+' Wunschziele · '+(w.from?fmt(U(w.from)):'Start')+' bis '+(w.to?fmt(U(w.to)):'Ende')+'</span></div>';
+  }).join(''):'<span class="mut">Noch niemand hat Angaben gemacht.</span>')+'</div>';
+  return h+'<p class="mut">Freunde einladen: Link zur Seite schicken. Wer sich registriert und ein Ziel bewertet, erscheint hier.</p>';
+}
+
+const app=document.getElementById('app');
+function render(force){
+  const a=document.activeElement;
+  if(!force&&a&&/INPUT|SELECT/.test(a.tagName)&&app.contains(a)){S.stale=true;return}
+  S.stale=false;
+  document.getElementById('who').innerHTML=S.uid?esc('Angemeldet: '+nm(S.uid))+' <button class="x" data-auth="logout">Abmelden</button>':'';
+  document.getElementById('err').innerHTML=S.err?'<div class="warn">'+esc(S.err)+'</div>':'';
+  document.getElementById('nav').innerHTML=[['dash','Mein Dashboard'],['plan','Reiseplan'],['grp','Gruppe & Einstellungen']].map(t=>'<button data-a="tab" data-v="'+t[0]+'" class="'+(S.tab===t[0]?'on':'')+'">'+t[1]+'</button>').join('');
+  if(S.auth!=='in'){document.getElementById('nav').innerHTML='';app.innerHTML=S.auth==='out'?loginHTML():'<p class="mut">Lade …</p>';return}
+  if(!S.ready){app.innerHTML='<p class="mut">Verbinde …</p>';return}
+  const P=compute();
+  app.innerHTML=S.tab==='plan'?planHTML(P):S.tab==='grp'?groupHTML():dashHTML(P);
+}
+app.addEventListener('focusout',()=>setTimeout(()=>{if(S.stale)render()},60));
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]');if(!b||!S.ready)return;
+  const a=b.dataset.a;
+  if(a==='tab'){S.tab=b.dataset.v}
+  else if(a==='rate'){const m=mine(),d=b.dataset.d,v=+b.dataset.v;if(m.ratings[d]===v)delete m.ratings[d];else m.ratings[d]=v;saveMe()}
+  else if(a==='addfix'){S.trip.fixed=(S.trip.fixed||[]).concat([{d:D[0].id,date:'',n:0}]);saveTrip()}
+  else if(a==='delfix'){S.trip.fixed.splice(+b.dataset.i,1);saveTrip()}
+  else if(a==='clr'){mine()[b.dataset.k]='';saveMe()}
+  render(1);
+});
+document.addEventListener('change',e=>{
+  const t=e.target,k=t.dataset.k;if(!k||!S.ready)return;
+  if(t.dataset.t==='me'){mine()[k]=t.value;saveMe()}
+  else if(t.dataset.t==='trip'){
+    let v=t.value;
+    if(t.type==='number'||k==='pace')v=Math.max(k==='pace'?0.1:1,Number(v)||(k==='pace'?1:1));
+    S.trip[k]=v;saveTrip();
+  }else if(t.dataset.t==='fix'){const f=S.trip.fixed[+t.dataset.i];if(f){f[k]=k==='n'?Math.max(0,Number(t.value)||0):t.value;saveTrip()}}
+  render();
+});
+
+function loginHTML(){
+  return '<div class="card login" style="max-width:440px"><b>Anmelden</b><div class="mut">Neu hier? Name, E-Mail und Passwort (mindestens 6 Zeichen) eingeben und „Registrieren“ wählen.</div>'+
+    '<label>Name (nur beim Registrieren)<input id="lName" autocomplete="name"></label>'+
+    '<label>E-Mail<input id="lMail" type="email" autocomplete="email"></label>'+
+    '<label>Passwort<input id="lPw" type="password" autocomplete="current-password"></label>'+
+    '<div class="row"><button class="go" data-auth="login">Anmelden</button><button class="go" data-auth="register">Registrieren</button><button class="x" data-auth="reset">Passwort vergessen</button></div>'+
+    '<div id="lMsg" class="mut" role="status"></div></div>';
+}
+function authErr(e){
+  const c=(e&&e.code)||'';
+  if(/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c))return 'E-Mail oder Passwort ist falsch.';
+  if(c.includes('email-already-in-use'))return 'Diese E-Mail ist schon registriert. Bitte „Anmelden“ wählen.';
+  if(c.includes('weak-password'))return 'Das Passwort braucht mindestens 6 Zeichen.';
+  if(c.includes('invalid-email'))return 'Die E-Mail-Adresse ist ungültig.';
+  if(c.includes('too-many-requests'))return 'Zu viele Versuche. Bitte kurz warten.';
+  if(c.includes('operation-not-allowed'))return 'E-Mail-Anmeldung ist in Firebase nicht aktiviert (siehe Anleitung, Schritt 2).';
+  if(c.includes('network'))return 'Keine Internetverbindung.';
+  return 'Fehler: '+(c||(e&&e.message)||'unbekannt');
+}
+function loadNames(){Object.entries(S.wishes).forEach(([id,w])=>{if(w&&w.name)S.names[id]=w.name});if(S.uid&&S.myName)S.names[S.uid]=S.myName}
+const CONFIGURED=!!firebaseConfig&&!/HIER_EINTRAGEN|DEIN-PROJEKT/.test(JSON.stringify(firebaseConfig));
+let auth=null,unsubs=[];
+function stopAll(){unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[];Object.assign(S,{tab:'dash',db:null,uid:null,myName:'',ready:false,loaded:0,wishes:{},names:{},trip:{...DEF,fixed:[]},err:''})}
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-auth]');if(!b||!auth)return;
+  const a=b.dataset.auth,val=id=>((document.getElementById(id)||{}).value||'');
+  const msg=t=>{const m=document.getElementById('lMsg');if(m)m.textContent=t};
+  try{
+    if(a==='logout'){await signOut(auth);return}
+    const mail=val('lMail').trim(),pw=val('lPw');
+    if(a==='reset'){if(!mail){msg('Bitte zuerst deine E-Mail eingeben.');return}await sendPasswordResetEmail(auth,mail);msg('Wir haben dir eine E-Mail zum Zurücksetzen geschickt.');return}
+    if(!mail||!pw){msg('Bitte E-Mail und Passwort eingeben.');return}
+    if(a==='register'){
+      const name=val('lName').trim();if(!name){msg('Bitte einen Namen eingeben, damit deine Freunde dich erkennen.');return}
+      msg('Konto wird angelegt …');
+      const c=await createUserWithEmailAndPassword(auth,mail,pw);
+      await updateProfile(c.user,{displayName:name});
+      if(S.uid===c.user.uid){S.myName=name;S.names[S.uid]=name;render(1)}
+    }else{msg('Anmeldung läuft …');await signInWithEmailAndPassword(auth,mail,pw)}
+  }catch(err){msg(authErr(err))}
+});
+if(!CONFIGURED){S.auth='cfg';S.err='Firebase ist noch nicht eingerichtet: Bitte die Datei config.js ausfüllen (siehe Anleitung).';render(1)}
+else{
+  const fb=initializeApp(firebaseConfig),fs=getFirestore(fb);auth=getAuth(fb);
+  const DB={
+    doc:p=>({set:d=>setDoc(doc(fs,p),d),onSnapshot:(n,er)=>onSnapshot(doc(fs,p),s=>n({id:s.id,exists:s.exists(),data:()=>s.data(),metadata:s.metadata}),er)}),
+    collection:p=>({onSnapshot:(n,er)=>onSnapshot(collection(fs,p),q=>n({docs:q.docs,metadata:q.metadata}),er)})
+  };
+  const perm=e=>(e&&e.code==='permission-denied')?'Keine Berechtigung. Ist deine E-Mail für diese Reise freigeschaltet (Anleitung, Schritt 3)?':((e&&e.message)||'');
+  S.auth='wait';render(1);
+  onAuthStateChanged(auth,u=>{
+    stopAll();
+    if(!u){S.auth='out';render(1);return}
+    S.auth='in';S.db=DB;S.uid=u.uid;S.myName=u.displayName||(u.email||'').split('@')[0];S.names[u.uid]=S.myName;
+    const got=()=>{if(++S.loaded>=2&&!S.ready){S.ready=true;render(1)}};
+    const fresh=x=>!(x&&x.metadata&&x.metadata.fromCache);
+    const tm=setTimeout(()=>{if(!S.ready&&S.uid===u.uid){S.ready=true;S.err='Die Verbindung ist langsam – Daten sind eventuell noch nicht vollständig geladen.';render(1)}},8000);
+    unsubs.push(()=>clearTimeout(tm));
+    render(1);
+    unsubs.push(DB.doc('trip/main').onSnapshot(s=>{
+      if(saveTrip.p()||Date.now()-saveTrip.t<6000){if(fresh(s)&&!S.ready)got();return}
+      if(s.exists){const d=clone(s.data()||{});S.trip=Object.assign({},DEF,d,{fixed:Array.isArray(d.fixed)?d.fixed.map(f=>({...f})):[]})}
+      if(fresh(s)&&!S.ready)got();
+      render();
+    },e=>{S.err='Reisedaten konnten nicht geladen werden: '+perm(e);got();render(1)}));
+    unsubs.push(DB.collection('wishes').onSnapshot(q=>{
+      const w={};q.docs.forEach(d=>{w[d.id]=clone(d.data()||{})});
+      if(S.ready&&S.wishes[S.uid])w[S.uid]=S.wishes[S.uid];
+      S.wishes=w;loadNames();if(fresh(q)&&!S.ready)got();
+      render();
+    },e=>{S.err='Wünsche konnten nicht geladen werden: '+perm(e);got();render(1)}));
+  });
+}
+</script>
+</body>
+</html>

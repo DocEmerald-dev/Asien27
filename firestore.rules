@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Wer darf mitplanen?
+    // Variante A (Standard): jeder, der sich auf der Seite registriert.
+    // Variante B (empfohlen): nur eure E-Mail-Adressen.
+    //   1. Die Liste in freunde() mit euren Adressen füllen (kleingeschrieben).
+    //   2. In mitglied() die Zeile "return angemeldet();" ersetzen durch:
+    //      return angemeldet() && request.auth.token.email.lower() in freunde();
+    function freunde() {
+      return ['anna@example.com', 'ben@example.com'];
+    }
+    function angemeldet() { return request.auth != null; }
+    function mitglied() { return angemeldet(); }
+
+    // Gemeinsame Reise-Eckdaten und Fixstopps: alle Mitglieder dürfen lesen und ändern.
+    match /trip/main {
+      allow read: if mitglied();
+      allow create, update: if mitglied()
+        && request.resource.data.keys().hasOnly(['start', 'end', 'group', 'min', 'pace', 'fixed']);
+    }
+
+    // Wünsche: alle Mitglieder dürfen lesen, jeder darf nur seine eigenen ändern.
+    match /wishes/{uid} {
+      allow read: if mitglied();
+      allow create, update: if mitglied() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['ratings', 'from', 'to', 'name']);
+    }
+  }
+}
